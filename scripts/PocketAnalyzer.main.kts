@@ -3,7 +3,7 @@
 // ---------------------------------------------------------------
 // Usage:
 //   chmod +x PocketAnalyzer.main.kts
-//   ./PocketAnalyzer.main.kts <part_000000.csv>
+//   ./PocketAnalyzer.main.kts <file.csv|directory>
 // If you provide a path containing "csv", the script will load CSV; otherwise – JSON.
 // ---------------------------------------------------------------
 @file:DependsOn("com.opencsv:opencsv:5.9")
@@ -53,17 +53,64 @@ fun normalizeUrl(u: String): String {
 
 // ------------------------ SCRIPT ------------------------ //
 if (args.isEmpty()) {
-    println("Usage: PocketAnalyzer.main.kts <file.csv>")
+    println("Usage: PocketAnalyzer.main.kts <file.csv|directory>")
     System.exit(1)
 }
 
 val filePath = args[0]
-if (!File(filePath).exists()) {
-    println("Error: File '$filePath' does not exist!")
+val file = File(filePath)
+
+fun getCsvFilesFromDir(dir: File): List<File> =
+    dir.listFiles { f -> f.isFile && f.extension.equals("csv", ignoreCase = true) }?.sortedBy { it.name } ?: emptyList()
+
+val csvFiles: List<File> = when {
+    file.isDirectory -> getCsvFilesFromDir(file)
+    file.isFile && file.extension.equals("csv", ignoreCase = true) -> listOf(file)
+    else -> throw Exception("Unsupported input. Please provide a CSV file or directory containing CSV files.")
+}
+
+if (csvFiles.isEmpty()) {
+    println("No CSV files found!")
     exitProcess(1)
 }
 
-val rawItems: List<PocketItem> = if (filePath.contains(".csv", ignoreCase = true)) parseCsv(filePath) else throw Exception("Unsupported file format. Please provide a CSV file.")
+// Read headers from all files and check if they match
+val headers = csvFiles.map { csv ->
+    FileReader(csv).use { fr ->
+        val firstLine = fr.readLines().firstOrNull()?.trim() ?: ""
+        firstLine
+    }
+}
+
+val allHeadersSame = headers.distinct().size == 1
+if (!allHeadersSame) {
+    println("CSV headers do not match across files:")
+    headers.distinct().forEachIndexed { idx, h -> println("Header #$idx: $h") }
+    exitProcess(1)
+}
+
+val allRows = mutableListOf<PocketItem>()
+csvFiles.forEachIndexed { idx, csv ->
+    val skipLines = if (idx == 0) 1 else 1 // always skip header
+    val reader = CSVReaderBuilder(FileReader(csv)).withSkipLines(skipLines).build()
+    val rows = reader.readAll().map { it as Array<String> }
+    rows.mapNotNullTo(allRows) { row ->
+        if (row.size < 4) return@mapNotNullTo null
+        val title = row[0].ifBlank { "<no-title>" }
+        val url = row[1]
+        val timeAdded = row[2]
+        val tagString = if (row.size > 4) row[4] else row[3]
+        val tags = if (tagString.isBlank()) emptyList() else tagString.split("|")
+        PocketItem(
+            title = title,
+            url = url,
+            added = timeAdded,
+            tags = tags
+        )
+    }
+}
+
+val rawItems: List<PocketItem> = allRows
 
 println("Loaded: ${rawItems.size} records…")
 
