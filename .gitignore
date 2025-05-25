@@ -30,3 +30,4 @@ replay_pid*
 build
 export_data
 output
+duckdb_data

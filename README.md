@@ -13,7 +13,7 @@ With Pocket's closure, this tool provides a way to analyze your exported data an
 This project serves as a playground for several technologies highlighted at KotlinConf:
 
 - **Kotlin Scripts (.kts)** - Executable Kotlin scripts for data processing
-- **DuckDB** - High-performance analytical database (planned)
+- **DuckDB** - High-performance analytical database
 - **Kotlin Notebook** - Interactive data analysis (planned)
 - **Kotlin LSP** - Language Server Protocol integration
 
@@ -22,6 +22,7 @@ This project serves as a playground for several technologies highlighted at Kotl
 - **Deduplication**: Removes duplicate URLs based on normalized URLs
 - **Data Cleaning**: Handles missing titles, invalid URLs, and malformed data
 - **Export Ready**: Outputs clean CSV format suitable for importing into other services
+- **DuckDB Export**: Optionally saves deduplicated data to a DuckDB database for scalable querying
 
 ## Usage
 
@@ -29,6 +30,7 @@ This project serves as a playground for several technologies highlighted at Kotl
 
 - Kotlin runtime environment
 - Your Pocket export file (CSV format)
+- Java (for DuckDB JDBC)
 
 ### Running the Analyzer
 
@@ -36,28 +38,47 @@ This project serves as a playground for several technologies highlighted at Kotl
 # Make the script executable
 chmod +x scripts/PocketAnalyzer.main.kts
 
-# Analyze CSV export  
-./scripts/PocketAnalyzer.main.kts part_000000.csv
+# Analyze a single CSV export
+./scripts/PocketAnalyzer.main.kts export_data/part_000000.csv
+
+# Analyze and merge all CSVs in a directory
+./scripts/PocketAnalyzer.main.kts export_data/
+
+# Save deduplicated data to DuckDB (in addition to CSV)
+./scripts/PocketAnalyzer.main.kts export_data/ --duckdb-path=output/pocket.duckdb
 ```
+
+> **Note:** You must create the DuckDB database file (e.g. `output/pocket.duckdb`) before running the script with `--duckdb-path`. You can do this by running `duckdb output/pocket.duckdb` in your terminal, which will create the file if it does not exist, then exit DuckDB with `.quit`.
 
 ### Output
 
-The analyzer generates a cleaned CSV file (`cleaned_links.csv`) with the following columns:
-- `title` - Article/page title
-- `url` - Cleaned and normalized URL
-- `added_iso` - Date added to Pocket
-- `alive` - URL status (currently always true)
-- `tags` - Pipe-separated list of tags
+- The analyzer generates a cleaned CSV file (`cleaned_links.csv`) in the `output/` directory.
+- If `--duckdb-path` is provided, deduplicated data is also saved to a DuckDB database at the specified path. Each URL is a primary key, and the value is stored in a table `pocket_items`.
+
+#### Example DuckDB Usage
+
+You can use any DuckDB-compatible tool or library to query the resulting database. Each row contains the URL, title, added date, and tags as columns.
 
 ## Data Processing Pipeline
 
 1. **Parsing**: Extracts title, URL, timestamp, and tags from raw data
 2. **Normalization**: Standardizes URLs (HTTPS, removes trailing slashes)
 3. **Deduplication**: Removes duplicate entries based on normalized URLs
-4. **Export**: Generates clean CSV output for migration
+4. **Export**: Generates clean CSV output for migration and/or saves to DuckDB
+
+## Project Setup
+
+1. Clone the repository:
+   ```bash
+   git clone <repo-url>
+   cd moltres-pocket-analyzer
+   ```
+2. Ensure you have Java and Kotlin installed.
+3. (Optional) For DuckDB support, no extra steps are needed; the script will download the dependency automatically.
+4. Place your Pocket CSV exports in a directory (e.g., `export_data/`).
+5. Run the script as shown above.
 
 ## Future Enhancements
-- [ ] **DuckDB Integration**: High-performance analytics on large datasets
 - [ ] **Kotlin Notebook**: Interactive data exploration and visualization
 - [ ] **URL Validation**: Check if saved links are still accessible
 - [ ] **Migration Helpers**: Direct export to popular alternatives (Instapaper, Raindrop, etc.)
