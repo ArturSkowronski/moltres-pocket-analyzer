@@ -14,7 +14,7 @@ This project serves as a playground for several technologies highlighted at Kotl
 
 - **Kotlin Scripts (.kts)** - Executable Kotlin scripts for data processing
 - **DuckDB** - High-performance analytical database
-- **Kotlin Notebook** - Interactive data analysis (planned)
+- **Kotlin Notebook** - Interactive data analysis (supported, see below)
 - **Kotlin LSP** - Language Server Protocol integration
 
 ## Features
@@ -23,6 +23,7 @@ This project serves as a playground for several technologies highlighted at Kotl
 - **Data Cleaning**: Handles missing titles, invalid URLs, and malformed data
 - **Export Ready**: Outputs clean CSV format suitable for importing into other services
 - **DuckDB Export**: Optionally saves deduplicated data to a DuckDB database for scalable querying
+- **Kotlin Notebook Support**: Explore, analyze, and visualize your Pocket data interactively
 
 ## Usage
 
@@ -31,6 +32,7 @@ This project serves as a playground for several technologies highlighted at Kotl
 - Kotlin runtime environment
 - Your Pocket export file (CSV format)
 - Java (for DuckDB JDBC)
+- (Optional) [Kotlin Jupyter Notebook](https://github.com/Kotlin/kotlin-jupyter) for interactive analysis
 
 ### Running the Analyzer
 
@@ -49,6 +51,27 @@ chmod +x scripts/PocketAnalyzer.main.kts
 ```
 
 > **Note:** You must create the DuckDB database file (e.g. `output/pocket.duckdb`) before running the script with `--duckdb-path`. You can do this by running `duckdb output/pocket.duckdb` in your terminal, which will create the file if it does not exist, then exit DuckDB with `.quit`.
+
+### Kotlin Notebook Support
+
+You can use this project in a [Kotlin Jupyter Notebook](https://github.com/Kotlin/kotlin-jupyter) for interactive data exploration and visualization:
+
+1. Install Kotlin Jupyter (see [official instructions](https://github.com/Kotlin/kotlin-jupyter)).
+2. Create a new `.ipynb` or `.kts` notebook in the project directory.
+3. Add the following to a cell to import the main logic:
+   ```kotlin
+   %useLatestDescriptors
+   %classpath add scripts/PocketAnalyzer.main.kts
+   ```
+4. You can now use the functions and data classes from the script to load, analyze, and visualize your Pocket data interactively.
+
+**Example notebook cell:**
+```kotlin
+val items = parseCsv("export_data/part_000000.csv")
+items.take(5)
+```
+
+You can also use libraries like Krangl, Lets-Plot, or Kotlin DataFrame for further analysis and visualization.
 
 ### Output
 
